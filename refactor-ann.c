@@ -26,8 +26,6 @@ typedef struct layer
 
 int main()
 {
-    float mockBias[2] = {0, 0};
-    float mockWeights[2][2] = {{0.1, 0.3}, {0.2, 0.0}};
     int i, j, k, l, ageCount, a;
     int inputLayer;
     int outputLayer;
@@ -80,8 +78,7 @@ int main()
         network[0].neurons[i].weights = (float *)malloc(weightsSize * sizeof(float));
         for (j = 0; j < weightsSize; j++)
         {
-            //network[0].neurons[i].weights[j] = (rand() % 10000) / 10000.0;
-            network[0].neurons[i].weights[j] = mockWeights[0][i];
+            network[0].neurons[i].weights[j] = (rand() % 10000) / 10000.0;
         }
     }
 
@@ -99,14 +96,12 @@ int main()
             {
                 network[i].neurons[j].inputSum = 0;
                 network[i].neurons[j].bias = 0;
-                //network[i].neurons[j].bias = mockBias[j];
                 network[i].neurons[j].delta = 0;
                 network[i].neurons[j].input = (float *)malloc(previousLayerSize * sizeof(float));
                 network[i].neurons[j].weights = (float *)malloc(nextLayerSize * sizeof(float));
                 for (k = 0; k < nextLayerSize; k++)
                 {
-                    //network[i].neurons[j].weights[k] = (rand() % 10000) / 10000.0;
-                    network[i].neurons[j].weights[k] = mockWeights[1][k];
+                    network[i].neurons[j].weights[k] = (rand() % 10000) / 10000.0;
                 }
             }
         }
@@ -118,7 +113,6 @@ int main()
     {
         network[hiddenLayers + 1].neurons[i].inputSum = 0;
         network[hiddenLayers + 1].neurons[i].bias = 0;
-        //network[hiddenLayers + 1].neurons[i].bias = mockBias[i + 2];
         network[hiddenLayers + 1].neurons[i].delta = 0;
         network[hiddenLayers + 1].neurons[i].input = (float *)malloc(hiddenLayersNeuronsAmount * sizeof(float));
     }
