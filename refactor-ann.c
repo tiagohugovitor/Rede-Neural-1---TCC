@@ -11,7 +11,6 @@ float sigmoide(float x)
 
 typedef struct neuron
 {
-    int layer;
     float *input;
     float *weights;
     float inputSum;
@@ -27,9 +26,8 @@ typedef struct layer
 
 int main()
 {
-    float mockBias[4] = {0.35, 0.35, 0.6, 0.6};
-    float mockWeights[4][2] = {{0.15, 0.25}, {0.20, 0.30}, {0.40, 0.50}, {0.45, 0.55}};
-
+    float mockBias[2] = {0, 0};
+    float mockWeights[2][2] = {{0.1, 0.3}, {0.2, 0.0}};
     int i, j, k, l, ageCount, a;
     int inputLayer;
     int outputLayer;
@@ -82,8 +80,8 @@ int main()
         network[0].neurons[i].weights = (float *)malloc(weightsSize * sizeof(float));
         for (j = 0; j < weightsSize; j++)
         {
-            network[0].neurons[i].weights[j] = (rand() % 10000) / 10000.0;
-            //network[0].neurons[i].weights[j] = mockWeights[i][j];
+            //network[0].neurons[i].weights[j] = (rand() % 10000) / 10000.0;
+            network[0].neurons[i].weights[j] = mockWeights[0][i];
         }
     }
 
@@ -100,15 +98,15 @@ int main()
             for (j = 0; j < hiddenLayersNeuronsAmount; j++)
             {
                 network[i].neurons[j].inputSum = 0;
-                network[i].neurons[j].bias = 1;
+                network[i].neurons[j].bias = 0;
                 //network[i].neurons[j].bias = mockBias[j];
                 network[i].neurons[j].delta = 0;
                 network[i].neurons[j].input = (float *)malloc(previousLayerSize * sizeof(float));
                 network[i].neurons[j].weights = (float *)malloc(nextLayerSize * sizeof(float));
                 for (k = 0; k < nextLayerSize; k++)
                 {
-                    network[i].neurons[j].weights[k] = (rand() % 10000) / 10000.0;
-                    //network[i].neurons[j].weights[k] = mockWeights[j + 2][k];
+                    //network[i].neurons[j].weights[k] = (rand() % 10000) / 10000.0;
+                    network[i].neurons[j].weights[k] = mockWeights[1][k];
                 }
             }
         }
@@ -119,7 +117,7 @@ int main()
     for (i = 0; i < outputLayer; i++)
     {
         network[hiddenLayers + 1].neurons[i].inputSum = 0;
-        network[hiddenLayers + 1].neurons[i].bias = 1;
+        network[hiddenLayers + 1].neurons[i].bias = 0;
         //network[hiddenLayers + 1].neurons[i].bias = mockBias[i + 2];
         network[hiddenLayers + 1].neurons[i].delta = 0;
         network[hiddenLayers + 1].neurons[i].input = (float *)malloc(hiddenLayersNeuronsAmount * sizeof(float));
@@ -143,24 +141,27 @@ int main()
             printf("Digite a quantidade de dados que serão utilizados para o treinamento: ");
             scanf("%d", &dataTrainingAmount);
             printf("\n");
-            int **trainingInput = (int **)malloc(dataTrainingAmount * sizeof(int));
+            float **trainingInput = (float **)malloc(dataTrainingAmount * sizeof(float *));
+            float **trainingOutput = (float **)malloc(dataTrainingAmount * sizeof(float *));
             //Leitura dos dados de entrada
             for (i = 0; i < dataTrainingAmount; i++)
             {
-                trainingInput[i] = (int *)malloc((inputLayer + 1) * sizeof(int));
+                trainingInput[i] = (float *)malloc((inputLayer + 1) * sizeof(float));
+                trainingOutput[i] = (float *)malloc((outputLayer + 1) * sizeof(float));
                 for (j = 0; j < inputLayer; j++)
                 {
                     printf("Digite a entrada %d do conjunto de treinamento %d: ", j, i);
-                    scanf("%d", &trainingInput[i][j]);
+                    scanf("%f", &trainingInput[i][j]);
                 }
-                printf("Digite a saida esperada do conjunto de treinamento %d: ", i);
-                scanf("%d", &trainingInput[i][inputLayer]);
+                for (j = 0; j < outputLayer; j++)
+                {
+                    printf("Digite a saida %d esperada do conjunto de treinamento %d: ", j, i);
+                    scanf("%f", &trainingOutput[i][j]);
+                }
             }
-            
+
             for (ageCount = 0; ageCount < ages; ageCount++)
             {
-                printf("EPOCA %d: ", ageCount);
-                
                 for (l = 0; l < dataTrainingAmount; l++)
                 {
                     //Propagação de dados para execução
@@ -213,7 +214,8 @@ int main()
                     //Calculo dos deltas da ultima camada
                     for (j = 0; j < outputLayer; j++)
                     {
-                        network[hiddenLayers + 1].neurons[j].delta = learningRate * network[hiddenLayers + 1].neurons[j].sigmoidResult * (trainingInput[l][inputLayer] - network[hiddenLayers + 1].neurons[j].sigmoidResult) * (1 - network[hiddenLayers + 1].neurons[j].sigmoidResult);
+                        //printf("Calculo do erro: %f \n", trainingOutput[l][j] -  network[hiddenLayers + 1].neurons[j].sigmoidResult);
+                        network[hiddenLayers + 1].neurons[j].delta = (trainingOutput[l][j] - network[hiddenLayers + 1].neurons[j].sigmoidResult) * network[hiddenLayers + 1].neurons[j].sigmoidResult * (1 - network[hiddenLayers + 1].neurons[j].sigmoidResult);
                     }
 
                     //Calculo dos deltas das camadas intermediarias
@@ -227,23 +229,31 @@ int main()
                             {
                                 network[j].neurons[k].delta += network[j + 1].neurons[a].delta * network[j].neurons[k].weights[a];
                             }
-                            network[j].neurons[k].delta = learningRate * network[j].neurons[k].delta * network[j].neurons[k].sigmoidResult * (1 - network[j].neurons[k].sigmoidResult);
+                            network[j].neurons[k].delta = network[j].neurons[k].delta * network[j].neurons[k].sigmoidResult * (1 - network[j].neurons[k].sigmoidResult);
                         }
                     }
 
                     //Atualizaçao dos pesos e dos bias
-                    for (j = 0; j > hiddenLayers + 1; j++)
+                    for (j = 0; j < hiddenLayers + 1; j++)
                     {
+                        //printf("j: %d", j);
                         int nextLayerSize = (j == hiddenLayers) ? outputLayer : hiddenLayersNeuronsAmount;
                         int layerSize = (j == 0) ? inputLayer : hiddenLayersNeuronsAmount;
                         for (k = 0; k < layerSize; k++)
                         {
+
+                            // printf("k: %d", k);
                             for (a = 0; a < nextLayerSize; a++)
                             {
-                                network[j].neurons[k].weights[a] = network[j].neurons[k].weights[a] + (network[j+1].neurons[a].delta * network[j].neurons[k].sigmoidResult);
+                                network[j].neurons[k].weights[a] = network[j].neurons[k].weights[a] + (network[j + 1].neurons[a].delta * network[j].neurons[k].sigmoidResult * learningRate);
+                                //   printf("Novo peso: %f\n", network[j].neurons[k].weights[a]);
                             }
-                            network[j].neurons[k].bias = network[j].neurons[k].weights[a] + network[j+1].neurons[a].delta;
+                            network[j].neurons[k].bias = network[j].neurons[k].bias + (network[j].neurons[k].delta * learningRate);
                         }
+                    }
+                    for (j = 0; j < outputLayer; j++)
+                    {
+                        network[hiddenLayers + 1].neurons[j].bias = network[hiddenLayers + 1].neurons[j].bias + (network[hiddenLayers + 1].neurons[j].delta * learningRate);
                     }
                 }
             }
