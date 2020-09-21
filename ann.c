@@ -3,722 +3,300 @@
 #include <math.h>
 #include <time.h>
 
+typedef struct neuron
+{
+    float *input;
+    float *weights;
+    float inputSum;
+    float sigmoidResult;
+    float bias;
+    float delta;
+} Neuron;
+
+typedef struct layer
+{
+    Neuron *neurons;
+} Layer;
+
+typedef struct ann
+{
+    int inputLayer;
+    int outputLayer;
+    int hiddenLayers;
+    int hiddenLayersNeuronsAmount;
+    Layer *network;
+} Ann;
+
 float sigmoide(float x)
 {
     float result = 1 / (1 + exp(-x));
     return result;
 }
 
-struct neuron
+void alocateAnn(Ann *ann)
 {
-    int layer;
-    float *input;
-    float *weights;
-    float bias;
-    float delta;
-    float *dW;
-    float input_sum;
-    float sigmoid_result;
-};
-
-struct layer
-{
-    struct neuron *neurons;
-};
-
-int main()
-{
-    int i, j, k, l, a, b, c, d, e;
-    int input_layer;
-    int output_layer;
-    int amount_neurons_hidden_layers;
-    int amount_layers;
-    int option = 1;
-    int ages;
-    int quantity_data_train;
-    srand((unsigned)time(NULL));
-
-    //Declarações de entrada e saída
-    printf("Insira a quantidade de neuronio na camada de entrada: ");
-    scanf("%d", &input_layer);
-    setbuf(stdin, NULL);
-    printf("\n");
-
-    printf("Insira a quantidade de camadas ocultas da rede: ");
-    scanf("%d", &amount_layers);
-    setbuf(stdin, NULL);
-    printf("\n");
-
-    if (amount_layers != 0)
-    {
-        printf("Insira a quantidade de neuronios em cada camada oculta da rede: ");
-        scanf("%d", &amount_neurons_hidden_layers);
-        setbuf(stdin, NULL);
-        printf("\n");
-    }
-
-    printf("Insira a quantidade de neuronios na camada de saída: ");
-    scanf("%d", &output_layer);
-    setbuf(stdin, NULL);
-    printf("\n");
-
-    //Alocar a rede neural
-    struct layer *network;
-
-    network = (struct layer *)malloc((amount_layers + 2) * sizeof(struct layer));
+    int i, j, k;
+    ann->network = (Layer *)malloc((ann->hiddenLayers + 2) * sizeof(Layer));
 
     //Alocando entrada da rede
-    network[0].neurons = (struct neuron *)malloc(input_layer * sizeof(struct neuron));
-    for (i = 0; i < input_layer; i++)
+    ann->network[0].neurons = (Neuron *)malloc(ann->inputLayer * sizeof(Neuron));
+    for (i = 0; i < ann->inputLayer; i++)
     {
-        if (amount_layers == 0)
+        ann->network[0].neurons[i].inputSum = 0;
+        ann->network[0].neurons[i].bias = 0;
+        int weightsSize = (ann->hiddenLayers == 0) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+        ann->network[0].neurons[i].weights = (float *)malloc(weightsSize * sizeof(float));
+        for (j = 0; j < weightsSize; j++)
         {
-            network[0].neurons[i].input_sum = 0;
-            network[0].neurons[i].bias = 0;
-            network[0].neurons[i].weights = (float *)malloc(output_layer * sizeof(float));
-            for (j = 0; j < output_layer; j++)
-            {
-                network[0].neurons[i].weights[j] = (rand() % 10000) / 10000.0;
-            }
-        }
-        else
-        {
-            network[0].neurons[i].input_sum = 0;
-            network[0].neurons[i].bias = 0;
-            network[0].neurons[i].weights = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
-            for (j = 0; j < amount_neurons_hidden_layers; j++)
-            {
-                network[0].neurons[i].weights[j] = (rand() % 10000) / 10000.0;
-            }
+            ann->network[0].neurons[i].weights[j] = (rand() % 10000) / 10000.0;
         }
     }
 
     //Alocando camadas ocultas
-    if (amount_layers != 0)
+    if (ann->hiddenLayers != 0)
     {
-        //Estruturando primeira camada oculta
-        network[1].neurons = (struct neuron *)malloc(amount_neurons_hidden_layers * sizeof(struct neuron));
-        for (j = 0; j < amount_neurons_hidden_layers; j++)
+        int previousLayerSize;
+        int nextLayerSize;
+        for (i = 1; i < ann->hiddenLayers + 1; i++)
         {
-            network[1].neurons[j].input_sum = 0;
-            network[1].neurons[j].bias = 1;
-            network[1].neurons[j].delta = 0;
-            network[1].neurons[j].dW = (float *)malloc(input_layer * sizeof(float));
-            network[1].neurons[j].input = (float *)malloc(input_layer * sizeof(float));
-            network[1].neurons[j].weights = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
-            for (k = 0; k < amount_neurons_hidden_layers; k++)
+            previousLayerSize = (i == 1) ? ann->inputLayer : ann->hiddenLayersNeuronsAmount;
+            nextLayerSize = (i == ann->hiddenLayers) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+            ann->network[i].neurons = (Neuron *)malloc(ann->hiddenLayersNeuronsAmount * sizeof(Neuron));
+            for (j = 0; j < ann->hiddenLayersNeuronsAmount; j++)
             {
-                network[1].neurons[j].weights[k] = (rand() % 10000) / 10000.0;
-            }
-        }
-        //Estruturando camadas ocultas intermediarias
-
-        for (i = 1; i < amount_layers - 1; i++)
-        {
-            network[i + 1].neurons = (struct neuron *)malloc(amount_neurons_hidden_layers * sizeof(struct neuron));
-            for (j = 0; j < amount_neurons_hidden_layers; j++)
-            {
-                network[i + 1].neurons[j].input_sum = 0;
-                network[i + 1].neurons[j].bias = 1;
-                network[i + 1].neurons[j].delta = 0;
-                network[i + 1].neurons[j].dW = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
-                network[i + 1].neurons[j].input = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
-                network[i + 1].neurons[j].weights = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
-                for (k = 0; k < amount_neurons_hidden_layers; k++)
+                ann->network[i].neurons[j].inputSum = 0;
+                ann->network[i].neurons[j].bias = 0;
+                ann->network[i].neurons[j].delta = 0;
+                ann->network[i].neurons[j].input = (float *)malloc(previousLayerSize * sizeof(float));
+                ann->network[i].neurons[j].weights = (float *)malloc(nextLayerSize * sizeof(float));
+                for (k = 0; k < nextLayerSize; k++)
                 {
-                    network[i + 1].neurons[j].weights[k] = (rand() % 10000) / 10000.0;
+                    ann->network[i].neurons[j].weights[k] = (rand() % 10000) / 10000.0;
                 }
-            }
-        }
-        //Estruturando ultima camada oculta
-        network[amount_layers].neurons = (struct neuron *)malloc(amount_neurons_hidden_layers * sizeof(struct neuron));
-        for (j = 0; j < amount_neurons_hidden_layers; j++)
-        {
-            network[amount_layers].neurons[j].input_sum = 0;
-            network[amount_layers].neurons[j].bias = 1;
-            network[amount_layers].neurons[j].delta = 0;
-            network[amount_layers].neurons[j].dW = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
-            network[amount_layers].neurons[j].input = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
-            network[amount_layers].neurons[j].weights = (float *)malloc(output_layer * sizeof(float));
-            for (k = 0; k < output_layer; k++)
-            {
-                network[amount_layers].neurons[j].weights[k] = (rand() % 10000) / 10000.0;
             }
         }
     }
 
     //Alocando saída da rede
-    network[amount_layers + 1].neurons = (struct neuron *)malloc(output_layer * sizeof(struct neuron));
-    for (i = 0; i < output_layer; i++)
+    ann->network[ann->hiddenLayers + 1].neurons = (Neuron *)malloc(ann->outputLayer * sizeof(Neuron));
+    for (i = 0; i < ann->outputLayer; i++)
     {
-        network[amount_layers + 1].neurons[i].input_sum = 0;
-        network[amount_layers + 1].neurons[i].bias = 1;
-        network[amount_layers + 1].neurons[i].delta = 0;
-        network[amount_layers + 1].neurons[i].dW = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
-        network[amount_layers + 1].neurons[i].input = (float *)malloc(amount_neurons_hidden_layers * sizeof(float));
+        ann->network[ann->hiddenLayers + 1].neurons[i].inputSum = 0;
+        ann->network[ann->hiddenLayers + 1].neurons[i].bias = 0;
+        ann->network[ann->hiddenLayers + 1].neurons[i].delta = 0;
+        ann->network[ann->hiddenLayers + 1].neurons[i].input = (float *)malloc(ann->hiddenLayersNeuronsAmount * sizeof(float));
+    }
+}
+
+void executeAnn(Ann *ann, float *input)
+{
+    int i, j, k;
+    //Propagação de dados para execução
+
+    //Camada de entrada
+    for (j = 0; j < ann->inputLayer; j++)
+    {
+        ann->network[0].neurons[j].sigmoidResult = input[j];
+        int nextLayerSize = (ann->hiddenLayers == 0) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+        for (k = 0; k < nextLayerSize; k++)
+        {
+            ann->network[1].neurons[k].input[j] = ann->network[0].neurons[j].sigmoidResult * ann->network[0].neurons[j].weights[k];
+        }
     }
 
-    while (option != 0)
+    //Camadas ocultas
+    if (ann->hiddenLayers != 0)
     {
-        if (option == 1)
+        for (i = 1; i < ann->hiddenLayers + 1; i++)
         {
-            //Treinamento
-            printf("Digite a quantidade de epocas para treinar os dados: ");
-            scanf("%d", &ages);
-            printf("\n");
-            printf("Digite a quantidade de dados que serão utilizados para o treinamento: ");
-            scanf("%d", &quantity_data_train);
-            printf("\n");
-            int **training_input = (int **)malloc(quantity_data_train * sizeof(int));
-            //Leitura dos dados de entrada
-            for (i = 0; i < quantity_data_train; i++)
+            int previousLayerSize = (i == 1) ? ann->inputLayer : ann->hiddenLayersNeuronsAmount;
+            int nextLayerSize = (i == ann->hiddenLayers) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+            for (j = 0; j < ann->hiddenLayersNeuronsAmount; j++)
             {
-                training_input[i] = (int *)malloc((input_layer + 1) * sizeof(int));
-                for (j = 0; j < input_layer; j++)
+                ann->network[i].neurons[j].inputSum = 0;
+                for (k = 0; k < previousLayerSize; k++)
                 {
-                    printf("Digite a entrada %d do conjunto de treinamento %d: ", j, i);
-                    scanf("%d", &training_input[i][j]);
+                    ann->network[i].neurons[j].inputSum += ann->network[i].neurons[j].input[k];
                 }
-                printf("Digite a saida esperada do conjunto de treinamento %d: ", i);
-                scanf("%d", &training_input[i][input_layer]);
-            }
-
-            for (i = 0; i < ages; i++)
-            {
-                for (l = 0; l < quantity_data_train; l++)
+                ann->network[i].neurons[j].sigmoidResult = sigmoide(ann->network[i].neurons[j].inputSum + ann->network[i].neurons[j].bias);
+                for (k = 0; k < nextLayerSize; k++)
                 {
-                    //Propagação de dados
-                    //Camada de entrada
-                    for (j = 0; j < input_layer; j++)
-                    {
-                        network[0].neurons[j].sigmoid_result = training_input[l][j];
-                        if (amount_layers == 0)
-                        {
-                            for (k = 0; k < output_layer; k++)
-                            {
-                                network[1].neurons[k].input[j] = network[0].neurons[j].sigmoid_result * network[0].neurons[j].weights[k];
-                            }
-                        }
-                        else
-                        {
-                            for (k = 0; k < amount_neurons_hidden_layers; k++)
-                            {
-                                network[1].neurons[k].input[j] = (network[0].neurons[j].sigmoid_result * network[0].neurons[j].weights[k]);
-                            }
-                        }
-                    }
-
-                    //camadas ocultas
-                    if (amount_layers != 0)
-                    {
-                        if (amount_layers == 1)
-                        {
-                            //prmeira e ultima camada são a mesma
-                            for (j = 0; j < amount_neurons_hidden_layers; j++)
-                            {
-                                for (k = 0; k < input_layer; k++)
-                                {
-                                    network[1].neurons[j].input_sum += network[1].neurons[j].input[k];
-                                }
-                                network[1].neurons[j].sigmoid_result = sigmoide(network[1].neurons[j].input_sum);
-                                for (k = 0; k < output_layer; k++)
-                                {
-                                    network[2].neurons[k].input[j] = (network[1].neurons[j].sigmoid_result * network[1].neurons[j].weights[k]);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            //primeira camada oculta
-                            for (j = 0; j < amount_neurons_hidden_layers; j++)
-                            {
-                                for (k = 0; k < input_layer; k++)
-                                {
-                                    network[1].neurons[j].input_sum += network[1].neurons[j].input[k];
-                                }
-                                network[1].neurons[j].sigmoid_result = sigmoide(network[1].neurons[j].input_sum);
-                                for (k = 0; k < amount_neurons_hidden_layers; k++)
-                                {
-                                    network[2].neurons[k].input[j] = (network[1].neurons[j].sigmoid_result * network[1].neurons[j].weights[k]);
-                                }
-                            }
-
-                            //camadas ocultas intermediarias
-                            for (b = 1; b < amount_layers - 1; b++)
-                            {
-                                for (j = 0; j < amount_neurons_hidden_layers; j++)
-                                {
-                                    for (k = 0; k < amount_neurons_hidden_layers; k++)
-                                    {
-                                        network[b + 1].neurons[j].input_sum += network[b + 1].neurons[j].input[k];
-                                    }
-                                    network[b + 1].neurons[j].sigmoid_result = sigmoide(network[b + 1].neurons[j].input_sum);
-                                    for (k = 0; k < amount_neurons_hidden_layers; k++)
-                                    {
-                                        network[b + 2].neurons[k].input[j] = (network[b + 1].neurons[j].sigmoid_result * network[b + 1].neurons[j].weights[k]);
-                                    }
-                                }
-                            }
-
-                            //ultima camada oculta
-                            for (j = 0; j < amount_neurons_hidden_layers; j++)
-                            {
-                                for (k = 0; k < amount_neurons_hidden_layers; k++)
-                                {
-                                    network[amount_layers].neurons[j].input_sum += network[amount_layers].neurons[j].input[k];
-                                }
-                                network[amount_layers].neurons[j].sigmoid_result = sigmoide(network[amount_layers].neurons[j].input_sum);
-                                for (k = 0; k < output_layer; k++)
-                                {
-                                    network[amount_layers + 1].neurons[k].input[j] = (network[amount_layers].neurons[j].sigmoid_result * network[amount_layers].neurons[j].weights[k]);
-                                }
-                            }
-                        }
-                    }
-
-                    //camada de saída
-                    if (amount_layers == 0)
-                    {
-                        for (j = 0; j < output_layer; j++)
-                        {
-                            for (k = 0; k < input_layer; k++)
-                            {
-                                network[1].neurons[j].input_sum += network[1].neurons[j].input[k];
-                            }
-                            network[amount_layers + 1].neurons[j].sigmoid_result = sigmoide(network[amount_layers + 1].neurons[j].input_sum);
-                        }
-                    }
-                    else
-                    {
-                        for (j = 0; j < output_layer; j++)
-                        {
-                            for (k = 0; k < amount_neurons_hidden_layers; k++)
-                            {
-                                network[amount_layers + 1].neurons[j].input_sum += network[amount_layers + 1].neurons[j].input[k];
-                            }
-                            network[amount_layers + 1].neurons[j].sigmoid_result = sigmoide(network[amount_layers + 1].neurons[j].input_sum);
-                        }
-                    }
-
-                    //Calculo dos deltas da ultima camada
-                    for (j = 0; j < output_layer; j++)
-                    {
-                        network[amount_layers + 1].neurons[j].delta = 0.2 * network[amount_layers + 1].neurons[j].sigmoid_result * (training_input[l][input_layer] - network[amount_layers].neurons[j].sigmoid_result) * (1 - network[amount_layers].neurons[j].sigmoid_result);
-                    }
-
-                    //Calculo dos deltas das camadas intermediarias
-                    for (j = amount_layers; j > 0; j--)
-                    {
-                        for (k = 0; k < amount_neurons_hidden_layers; k++)
-                        {
-                            //ultima camada de saida
-                            if (j == amount_layers)
-                            {
-                                for (a = 0; a < output_layer; a++)
-                                {
-                                    network[j].neurons[k].delta += 0.2 * network[j + 1].neurons[a].input[k] * (1 - network[j + 1].neurons[a].input[k]) * network[j + 1].neurons[a].delta * network[j].neurons[k].weights[a];
-                                    // printf("%f\n", rede.camada[i].neuronio[j].delta);
-                                    // printf("%f\n", rede.camada[i + 1].neuronio[k].entrada[j]);
-                                }
-                            }
-                            else
-                            {
-                                for (a = 0; a < amount_neurons_hidden_layers; a++)
-                                {
-                                    network[j].neurons[k].delta += 0.2 * network[j + 1].neurons[a].input[k] * (1 - network[j + 1].neurons[a].input[k]) * network[j + 1].neurons[a].delta * network[j].neurons[k].weights[a];
-                                    // printf("%f\n", rede.camada[i].neuronio[j].delta);
-                                    // printf("%f\n", rede.camada[i + 1].neuronio[k].entrada[j]);
-                                }
-                            }
-                        }
-                    }
-
-                    //Calculos dos DW
-                    if (ages == 0)
-                    {
-                        for (k = 0; k < output_layer; k++)
-                        {
-                            if (amount_layers == 0)
-                            {
-                                for (a = 0; a < input_layer + 1; a++)
-                                {
-                                    if (a == input_layer)
-                                    {
-                                        network[amount_layers + 1].neurons[k].dW[a] = 0.2 * network[amount_layers + 1].neurons[k].bias + 0.2 * network[amount_layers + 1].neurons[k].delta * network[amount_layers + 1].neurons[k].sigmoid_result;
-                                    }
-                                    else
-                                    {
-                                        network[amount_layers + 1].neurons[k].dW[a] = 0.2 * network[amount_layers].neurons[a].weights[k] + 0.2 * network[amount_layers + 1].neurons[k].delta * network[amount_layers + 1].neurons[k].sigmoid_result;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                for (a = 0; a < amount_neurons_hidden_layers + 1; a++)
-                                {
-                                    if (a == amount_neurons_hidden_layers)
-                                    {
-                                        network[amount_layers + 1].neurons[k].dW[a] = 0.2 * network[amount_layers + 1].neurons[k].bias + 0.2 * network[amount_layers + 1].neurons[k].delta * network[amount_layers + 1].neurons[k].sigmoid_result;
-                                    }
-                                    else
-                                    {
-                                        network[amount_layers + 1].neurons[k].dW[a] = 0.2 * network[amount_layers].neurons[a].weights[k] + 0.2 * network[amount_layers + 1].neurons[k].delta * network[amount_layers + 1].neurons[k].sigmoid_result;
-                                    }
-                                }
-                            }
-                        }
-                        for (k = amount_layers; k > 0; k--)
-                        {
-                            for (j = 0; j < amount_neurons_hidden_layers; j++)
-                            {
-                                // tratar camada de entrada
-                                if (k == 1)
-                                {
-                                    for (a = 0; a < input_layer + 1; a++)
-                                    {
-                                        if (a == input_layer)
-                                        {
-                                            network[k].neurons[j].dW[a] = 0.2 * network[k].neurons[j].bias + 0.2 * network[k].neurons[j].delta * network[k].neurons[j].sigmoid_result;
-                                        }
-                                        else
-                                        {
-                                            network[k].neurons[j].dW[a] = 0.2 + 0.2 * network[k].neurons[j].delta * network[k].neurons[j].sigmoid_result;
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    for (a = 0; a < amount_neurons_hidden_layers; a++)
-                                    {
-                                        if (a == amount_neurons_hidden_layers)
-                                        {
-                                            network[k].neurons[j].dW[a] = 0.2 * network[k].neurons[j].bias + 0.2 * network[k].neurons[j].delta * network[k].neurons[j].sigmoid_result;
-                                        }
-                                        else
-                                        {
-                                            network[k].neurons[j].dW[a] = 0.2 * network[k - 1].neurons[a].weights[j] + 0.2 * network[k].neurons[j].delta * network[k].neurons[j].sigmoid_result;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (k = 0; k < output_layer; k++)
-                        {
-                            if (amount_layers == 0)
-                            {
-                                for (a = 0; a < input_layer + 1; a++)
-                                {
-                                    if (a == input_layer)
-                                    {
-                                        network[amount_layers + 1].neurons[k].dW[a] = 0.2 * network[amount_layers + 1].neurons[k].bias + 0.2 * network[amount_layers + 1].neurons[k].delta * network[amount_layers + 1].neurons[k].sigmoid_result;
-                                    }
-                                    else
-                                    {
-                                        network[amount_layers + 1].neurons[k].dW[a] = 0.2 * network[amount_layers + 1].neurons[k].dW[a] + 0.2 * network[amount_layers + 1].neurons[k].delta * network[amount_layers + 1].neurons[k].sigmoid_result;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                for (a = 0; a < amount_neurons_hidden_layers + 1; a++)
-                                {
-                                    if (a == amount_neurons_hidden_layers)
-                                    {
-                                        network[amount_layers + 1].neurons[k].dW[a] = 0.2 * network[amount_layers + 1].neurons[k].bias + 0.2 * network[amount_layers + 1].neurons[k].delta * network[amount_layers + 1].neurons[k].sigmoid_result;
-                                    }
-                                    else
-                                    {
-                                        network[amount_layers + 1].neurons[k].dW[a] = 0.2 * network[amount_layers + 1].neurons[k].dW[a] + 0.2 * network[amount_layers + 1].neurons[k].delta * network[amount_layers + 1].neurons[k].sigmoid_result;
-                                    }
-                                }
-                            }
-                        }
-                        for (k = amount_layers; k > 0; k--)
-                        {
-                            for (j = 0; j < amount_neurons_hidden_layers; j++)
-                            {
-                                if (k == 1)
-                                {
-                                    for (a = 0; a < input_layer + 1; a++)
-                                    {
-                                        if (a == input_layer)
-                                        {
-                                            network[k].neurons[j].dW[a] = 0.2 * network[k].neurons[j].bias + 0.2 * network[k].neurons[j].delta * network[k].neurons[j].sigmoid_result;
-                                        }
-                                        else
-                                        {
-                                            network[k].neurons[j].dW[a] = 0.2 * network[k].neurons[j].dW[a] + 0.2 * network[k].neurons[j].delta * network[k].neurons[j].sigmoid_result;
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    for (a = 0; a < amount_neurons_hidden_layers + 1; a++)
-                                    {
-                                        if (a == amount_neurons_hidden_layers)
-                                        {
-                                            network[k].neurons[j].dW[a] = 0.2 * network[k].neurons[j].bias + 0.2 * network[k].neurons[j].delta * network[k].neurons[j].sigmoid_result;
-                                        }
-                                        else
-                                        {
-                                            network[k].neurons[j].dW[a] = 0.2 * network[k].neurons[j].dW[a] + 0.2 * network[k].neurons[j].delta * network[k].neurons[j].sigmoid_result;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    //Atualizaçao dos pesos
-                    for (j = 1; j < amount_layers + 2; j++)
-                    {
-                        //ultima camada
-                        if (j == amount_layers + 1)
-                        {
-                            for (k = 0; k < output_layer; k++)
-                            {
-                                if (amount_layers == 0)
-                                {
-                                    for (a = 0; a < input_layer + 1; a++)
-                                    {
-                                        if (a == input_layer)
-                                        {
-                                            network[j].neurons[k].bias += network[j].neurons[k].dW[a];
-                                        }
-                                        else
-                                        {
-                                            network[j - 1].neurons[a].weights[k] += network[j].neurons[k].dW[a];
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    for (a = 0; a < amount_neurons_hidden_layers + 1; a++)
-                                    {
-                                        if (a == amount_neurons_hidden_layers)
-                                        {
-                                            network[j].neurons[k].bias += network[j].neurons[k].dW[a];
-                                        }
-                                        else
-                                        {
-                                            network[j - 1].neurons[a].weights[k] += network[j].neurons[k].dW[a];
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            for (k = 0; k < amount_neurons_hidden_layers; k++)
-                            {
-                                if (j == 1)
-                                {
-                                    for (a = 0; a < input_layer + 1; a++)
-                                    {
-                                        if (a == input_layer)
-                                        {
-                                            network[j].neurons[k].bias += network[j].neurons[k].dW[a];
-                                        }
-                                        else
-                                        {
-                                            network[j - 1].neurons[a].weights[k] += network[j].neurons[k].dW[a];
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    for (a = 0; a < amount_neurons_hidden_layers + 1; a++)
-                                    {
-                                        if (a == amount_neurons_hidden_layers)
-                                        {
-                                            network[j].neurons[k].bias += network[j].neurons[k].dW[a];
-                                        }
-                                        else
-                                        {
-                                            network[j - 1].neurons[a].weights[k] += network[j].neurons[k].dW[a];
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    ann->network[i + 1].neurons[k].input[j] = (ann->network[i].neurons[j].sigmoidResult * ann->network[i].neurons[j].weights[k]);
                 }
             }
         }
-        else if (option == 2)
+    }
+
+    //Camada de saída
+    int previousLayerSize = (ann->hiddenLayers == 0) ? ann->inputLayer : ann->hiddenLayersNeuronsAmount;
+    for (j = 0; j < ann->outputLayer; j++)
+    {
+        ann->network[ann->hiddenLayers + 1].neurons[j].inputSum = 0;
+        for (k = 0; k < previousLayerSize; k++)
         {
-            int *input = (int *)malloc(input_layer * sizeof(int));
+            ann->network[ann->hiddenLayers + 1].neurons[j].inputSum += ann->network[ann->hiddenLayers + 1].neurons[j].input[k];
+        }
+        ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult = sigmoide(ann->network[ann->hiddenLayers + 1].neurons[j].inputSum + ann->network[ann->hiddenLayers + 1].neurons[j].bias);
+    }
+}
+
+void trainingAnn(Ann *ann)
+{
+    int i,j,k,l, ages, a, ageCount, dataTrainingAmount;
+    float learningRate;
+    //Receber dados de entrada
+    printf("Digite a taxa de aprendizado: ");
+    scanf("%f", &learningRate);
+    printf("\n");
+    printf("Digite a quantidade de epocas para treinar os dados: ");
+    scanf("%d", &ages);
+    printf("\n");
+    printf("Digite a quantidade de dados que serão utilizados para o treinamento: ");
+    scanf("%d", &dataTrainingAmount);
+    printf("\n");
+    float **trainingInput = (float **)malloc(dataTrainingAmount * sizeof(float *));
+    float **trainingOutput = (float **)malloc(dataTrainingAmount * sizeof(float *));
+    //Leitura dos dados de entrada
+    for (i = 0; i < dataTrainingAmount; i++)
+    {
+        trainingInput[i] = (float *)malloc((ann->inputLayer + 1) * sizeof(float));
+        trainingOutput[i] = (float *)malloc((ann->outputLayer + 1) * sizeof(float));
+        for (j = 0; j < ann->inputLayer; j++)
+        {
+            printf("Digite a entrada %d do conjunto de treinamento %d: ", j, i);
+            scanf("%f", &trainingInput[i][j]);
+        }
+        for (j = 0; j < ann->outputLayer; j++)
+        {
+            printf("Digite a saida %d esperada do conjunto de treinamento %d: ", j, i);
+            scanf("%f", &trainingOutput[i][j]);
+        }
+    }
+
+    for (ageCount = 0; ageCount < ages; ageCount++)
+    {
+        for (l = 0; l < dataTrainingAmount; l++)
+        {
             //Execução da rede
-            for (i = 0; i < input_layer; i++)
+            executeAnn(ann, trainingInput[l]);
+
+            //Calculo dos deltas da ultima camada
+            for (j = 0; j < ann->outputLayer; j++)
+            {
+                //printf("Calculo do erro: %f \n", trainingOutput[l][j] -  ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult);
+                ann->network[ann->hiddenLayers + 1].neurons[j].delta = (trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult) * ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult * (1 - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult);
+            }
+
+            //Calculo dos deltas das camadas intermediarias
+            for (j = ann->hiddenLayers; j > 0; j--)
+            {
+                int nextLayerSize = (j == ann->hiddenLayers) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+                for (k = 0; k < ann->hiddenLayersNeuronsAmount; k++)
+                {
+                    ann->network[j].neurons[k].delta = 0;
+                    for (a = 0; a < nextLayerSize; a++)
+                    {
+                        ann->network[j].neurons[k].delta += ann->network[j + 1].neurons[a].delta * ann->network[j].neurons[k].weights[a];
+                    }
+                    ann->network[j].neurons[k].delta = ann->network[j].neurons[k].delta * ann->network[j].neurons[k].sigmoidResult * (1 - ann->network[j].neurons[k].sigmoidResult);
+                }
+            }
+
+            //Atualizaçao dos pesos e dos bias
+            for (j = 0; j < ann->hiddenLayers + 1; j++)
+            {
+                //printf("j: %d", j);
+                int nextLayerSize = (j == ann->hiddenLayers) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+                int layerSize = (j == 0) ? ann->inputLayer : ann->hiddenLayersNeuronsAmount;
+                for (k = 0; k < layerSize; k++)
+                {
+
+                    // printf("k: %d", k);
+                    for (a = 0; a < nextLayerSize; a++)
+                    {
+                        ann->network[j].neurons[k].weights[a] = ann->network[j].neurons[k].weights[a] + (ann->network[j + 1].neurons[a].delta * ann->network[j].neurons[k].sigmoidResult * learningRate);
+                        //   printf("Novo peso: %f\n", ann->network[j].neurons[k].weights[a]);
+                    }
+                    ann->network[j].neurons[k].bias = ann->network[j].neurons[k].bias + (ann->network[j].neurons[k].delta * learningRate);
+                }
+            }
+            for (j = 0; j < ann->outputLayer; j++)
+            {
+                ann->network[ann->hiddenLayers + 1].neurons[j].bias = ann->network[ann->hiddenLayers + 1].neurons[j].bias + (ann->network[ann->hiddenLayers + 1].neurons[j].delta * learningRate);
+            }
+        }
+    }
+}
+
+int main()
+{
+    Ann *ann = (Ann *)malloc(sizeof(Ann));
+    int i;
+    int menuOption = 1;
+
+    //----------------------------- DECLARAÇÕES DE ENTRADA E SAÍDA ----------------------------- //
+
+    printf("Insira a quantidade de neuronios na camada de entrada: ");
+    scanf("%d", &ann->inputLayer);
+    setbuf(stdin, NULL);
+    printf("\n");
+
+    printf("Insira a quantidade de camadas ocultas da rede: ");
+    scanf("%d", &ann->hiddenLayers);
+    setbuf(stdin, NULL);
+    printf("\n");
+
+    if (ann->hiddenLayers != 0)
+    {
+        printf("Insira a quantidade de neuronios em cada camada oculta da rede: ");
+        scanf("%d", &ann->hiddenLayersNeuronsAmount);
+        setbuf(stdin, NULL);
+        printf("\n");
+    }
+
+    printf("Insira a quantidade de neuronios na camada de saída: ");
+    scanf("%d", &ann->outputLayer);
+    setbuf(stdin, NULL);
+    printf("\n");
+
+    //---------------------------- ALOCAÇÃO DA REDE NEURAL DINAMICAMENTE --------------------------- //
+
+    //Alocar a rede neural
+    alocateAnn(ann);
+
+    //------------------------------------ MENU DE OPÇÕES ------------------------------------- //
+
+    while (menuOption != 0)
+    {
+        if (menuOption == 1)
+        {
+            //------------------------------------ TREINAMENTO DA REDE ------------------------------------- //
+            trainingAnn(ann);
+        }
+        else if (menuOption == 2)
+        {
+            //------------------------------------ EXECUÇÃO DA REDE ------------------------------------- //
+
+            //Receber dados de entrada
+            float *input = (float *)malloc(ann->inputLayer * sizeof(float));
+            for (i = 0; i < ann->inputLayer; i++)
             {
                 printf("Digite o valor de entrada %d:", i);
-                scanf("%d", &input[i]);
+                scanf("%f", &input[i]);
             }
-
-            //Propagação de dados
-            //Camada de entrada
-            for (j = 0; j < input_layer; j++)
-            {
-                network[0].neurons[j].sigmoid_result = input[j];
-                if (amount_layers == 0)
-                {
-                    for (k = 0; k < output_layer; k++)
-                    {
-                        network[1].neurons[k].input[j] = network[0].neurons[j].sigmoid_result * network[0].neurons[j].weights[k];
-                    }
-                }
-                else
-                {
-                    for (k = 0; k < amount_neurons_hidden_layers; k++)
-                    {
-                        network[1].neurons[k].input[j] = (network[0].neurons[j].sigmoid_result * network[0].neurons[j].weights[k]);
-                    }
-                }
-            }
-
-            //camadas ocultas
-            if (amount_layers != 0)
-            {
-                if (amount_layers == 1)
-                {
-                    //prmeira e ultima camada são a mesma
-                    for (j = 0; j < amount_neurons_hidden_layers; j++)
-                    {
-                        for (k = 0; k < input_layer; k++)
-                        {
-                            network[1].neurons[j].input_sum += network[1].neurons[j].input[k];
-                        }
-                        network[1].neurons[j].sigmoid_result = sigmoide(network[1].neurons[j].input_sum);
-                        for (k = 0; k < output_layer; k++)
-                        {
-                            network[2].neurons[k].input[j] = (network[1].neurons[j].sigmoid_result * network[1].neurons[j].weights[k]);
-                        }
-                    }
-                }
-                else
-                {
-                    //primeira camada oculta
-                    for (j = 0; j < amount_neurons_hidden_layers; j++)
-                    {
-                        for (k = 0; k < input_layer; k++)
-                        {
-                            network[1].neurons[j].input_sum += network[1].neurons[j].input[k];
-                        }
-                        network[1].neurons[j].sigmoid_result = sigmoide(network[1].neurons[j].input_sum);
-                        for (k = 0; k < amount_neurons_hidden_layers; k++)
-                        {
-                            network[2].neurons[k].input[j] = (network[1].neurons[j].sigmoid_result * network[1].neurons[j].weights[k]);
-                        }
-                    }
-
-                    //camadas ocultas intermediarias
-                    for (i = 1; i < amount_layers - 1; i++)
-                    {
-                        for (j = 0; j < amount_neurons_hidden_layers; j++)
-                        {
-                            for (k = 0; k < amount_neurons_hidden_layers; k++)
-                            {
-                                network[i + 1].neurons[j].input_sum += network[i + 1].neurons[j].input[k];
-                            }
-                            network[i + 1].neurons[j].sigmoid_result = sigmoide(network[i + 1].neurons[j].input_sum);
-                            for (k = 0; k < amount_neurons_hidden_layers; k++)
-                            {
-                                network[i + 2].neurons[k].input[j] = (network[i + 1].neurons[j].sigmoid_result * network[i + 1].neurons[j].weights[k]);
-                            }
-                        }
-                    }
-
-                    //ultima camada oculta
-                    for (j = 0; j < amount_neurons_hidden_layers; j++)
-                    {
-                        for (k = 0; k < amount_neurons_hidden_layers; k++)
-                        {
-                            network[amount_layers].neurons[j].input_sum += network[amount_layers].neurons[j].input[k];
-                        }
-                        network[amount_layers].neurons[j].sigmoid_result = sigmoide(network[amount_layers].neurons[j].input_sum);
-                        for (k = 0; k < output_layer; k++)
-                        {
-                            network[amount_layers + 1].neurons[k].input[j] = (network[amount_layers].neurons[j].sigmoid_result * network[amount_layers].neurons[j].weights[k]);
-                        }
-                    }
-                }
-            }
-
-            //camada de saída
-            if (amount_layers == 0)
-            {
-                for (j = 0; j < output_layer; j++)
-                {
-                    for (k = 0; k < input_layer; k++)
-                    {
-                        network[1].neurons[j].input_sum += network[1].neurons[j].input[k];
-                    }
-                    network[amount_layers + 1].neurons[j].sigmoid_result = sigmoide(network[amount_layers + 1].neurons[j].input_sum);
-                }
-            }
-            else
-            {
-                for (j = 0; j < output_layer; j++)
-                {
-                    for (k = 0; k < amount_neurons_hidden_layers; k++)
-                    {
-                        network[amount_layers + 1].neurons[j].input_sum += network[amount_layers + 1].neurons[j].input[k];
-                    }
-                    network[amount_layers + 1].neurons[j].sigmoid_result = sigmoide(network[amount_layers + 1].neurons[j].input_sum);
-                }
-            }
+            //Executar
+            executeAnn(ann, input);
 
             //Printar Saída de dados
             printf("SAÍDA DA REDE\n");
-            for (j = 0; j < output_layer; j++)
+            for (i = 0; i < ann->outputLayer; i++)
             {
-                printf("NEURONIO %d: %f\n", j, network[amount_layers + 1].neurons[j].sigmoid_result);
+                printf("NEURONIO %d: %f\n", i, ann->network[ann->hiddenLayers + 1].neurons[i].sigmoidResult);
             }
         }
-        //Entrada de dados
 
-        // //Printar pesos da rede
-        // printf("PRIMEIRA CAMADA");
-        // for (i = 0; i < input_layer; i++)
-        // {
-        //     printf("\nNEURONIO %d:", i);
-        //     if (amount_layers == 0)
-        //     {
-        //         for (j = 0; j < output_layer; j++)
-        //         {
-        //             printf("%f,", network[0].neurons[i].weights[j]);
-        //         }
-        //     }
-        //     else
-        //     {
-        //         for (j = 0; j < amount_neurons_hidden_layers; j++)
-        //         {
-        //             printf("%f,", network[0].neurons[i].weights[j]);
-        //         }
-        //     }
-        // }
-        // for (i = 0; i < amount_layers - 1; i++)
-        // {
-        //     printf("\nCAMADA OCULTA %d", i);
-        //     for (j = 0; j < amount_neurons_hidden_layers; j++)
-        //     {
-        //         printf("\nNEURONIO %d:", j);
-        //         for (k = 0; k < amount_neurons_hidden_layers; k++)
-        //             printf("%f,", network[i + 1].neurons[j].weights[k]);
-        //     }
-        // }
-        // printf("\nULTIMA CAMADA OCULTA");
-        // for (i = 0; i < amount_neurons_hidden_layers; i++)
-        // {
-        //     printf("\nNEURONIO %d:", i);
-        //     for (k = 0; k < output_layer; k++)
-        //         printf("%f,", network[amount_layers].neurons[i].weights[k]);
-        // }
-        printf("Escolha:\n0 - Sair\n1 - Treinar a rede\n 2 - Testar a rede\n");
-        scanf("%d", &option);
+        printf("Escolha:\n0 - Sair\n1 - Treinar a rede\n2 - Testar a rede\n");
+        scanf("%d", &menuOption);
     }
-    return 0;
+    return 1;
 }
