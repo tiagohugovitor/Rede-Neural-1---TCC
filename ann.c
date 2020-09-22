@@ -143,7 +143,7 @@ void executeAnn(Ann *ann, float *input)
 void trainingAnn(Ann *ann)
 {
     int i,j,k,l, ages, a, ageCount, dataTrainingAmount;
-    float learningRate;
+    float learningRate, minimumError;
     //Receber dados de entrada
     printf("Digite a taxa de aprendizado: ");
     scanf("%f", &learningRate);
@@ -151,7 +151,10 @@ void trainingAnn(Ann *ann)
     printf("Digite a quantidade de epocas para treinar os dados: ");
     scanf("%d", &ages);
     printf("\n");
-    printf("Digite a quantidade de dados que serão utilizados para o treinamento: ");
+    printf("Digite o erro minimo como condicao de parada do treinamento: ");
+    scanf("%f", &minimumError);
+    printf("\n");
+    printf("Digite a quantidade de dados que serao utilizados para o treinamento: ");
     scanf("%d", &dataTrainingAmount);
     printf("\n");
     float **trainingInput = (float **)malloc(dataTrainingAmount * sizeof(float *));
@@ -175,55 +178,63 @@ void trainingAnn(Ann *ann)
 
     for (ageCount = 0; ageCount < ages; ageCount++)
     {
+        float maxError = 0;
         for (l = 0; l < dataTrainingAmount; l++)
         {
             //Execução da rede
             executeAnn(ann, trainingInput[l]);
+            float error = 0;
 
             //Calculo dos deltas da ultima camada
             for (j = 0; j < ann->outputLayer; j++)
             {
-                //printf("Calculo do erro: %f \n", trainingOutput[l][j] -  ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult);
                 ann->network[ann->hiddenLayers + 1].neurons[j].delta = (trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult) * ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult * (1 - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult);
+                error += (trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult)*(trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult);
             }
+            error = error/2;
+            if(error > maxError) {
+                maxError = error;
+            }
+            if (error >= minimumError) {
 
-            //Calculo dos deltas das camadas intermediarias
-            for (j = ann->hiddenLayers; j > 0; j--)
-            {
-                int nextLayerSize = (j == ann->hiddenLayers) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
-                for (k = 0; k < ann->hiddenLayersNeuronsAmount; k++)
+                //Calculo dos deltas das camadas intermediarias
+                for (j = ann->hiddenLayers; j > 0; j--)
                 {
-                    ann->network[j].neurons[k].delta = 0;
-                    for (a = 0; a < nextLayerSize; a++)
+                    int nextLayerSize = (j == ann->hiddenLayers) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+                    for (k = 0; k < ann->hiddenLayersNeuronsAmount; k++)
                     {
-                        ann->network[j].neurons[k].delta += ann->network[j + 1].neurons[a].delta * ann->network[j].neurons[k].weights[a];
+                        ann->network[j].neurons[k].delta = 0;
+                        for (a = 0; a < nextLayerSize; a++)
+                        {
+                            ann->network[j].neurons[k].delta += ann->network[j + 1].neurons[a].delta * ann->network[j].neurons[k].weights[a];
+                        }
+                        ann->network[j].neurons[k].delta = ann->network[j].neurons[k].delta * ann->network[j].neurons[k].sigmoidResult * (1 - ann->network[j].neurons[k].sigmoidResult);
                     }
-                    ann->network[j].neurons[k].delta = ann->network[j].neurons[k].delta * ann->network[j].neurons[k].sigmoidResult * (1 - ann->network[j].neurons[k].sigmoidResult);
+                }
+
+                //Atualizaçao dos pesos e dos bias
+                for (j = 0; j < ann->hiddenLayers + 1; j++)
+                {
+                    int nextLayerSize = (j == ann->hiddenLayers) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+                    int layerSize = (j == 0) ? ann->inputLayer : ann->hiddenLayersNeuronsAmount;
+                    for (k = 0; k < layerSize; k++)
+                    {
+                        for (a = 0; a < nextLayerSize; a++)
+                        {
+                            ann->network[j].neurons[k].weights[a] = ann->network[j].neurons[k].weights[a] + (ann->network[j + 1].neurons[a].delta * ann->network[j].neurons[k].sigmoidResult * learningRate);
+
+                        }
+                        ann->network[j].neurons[k].bias = ann->network[j].neurons[k].bias + (ann->network[j].neurons[k].delta * learningRate);
+                    }
+                }
+                for (j = 0; j < ann->outputLayer; j++)
+                {
+                    ann->network[ann->hiddenLayers + 1].neurons[j].bias = ann->network[ann->hiddenLayers + 1].neurons[j].bias + (ann->network[ann->hiddenLayers + 1].neurons[j].delta * learningRate);
                 }
             }
-
-            //Atualizaçao dos pesos e dos bias
-            for (j = 0; j < ann->hiddenLayers + 1; j++)
-            {
-                //printf("j: %d", j);
-                int nextLayerSize = (j == ann->hiddenLayers) ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
-                int layerSize = (j == 0) ? ann->inputLayer : ann->hiddenLayersNeuronsAmount;
-                for (k = 0; k < layerSize; k++)
-                {
-
-                    // printf("k: %d", k);
-                    for (a = 0; a < nextLayerSize; a++)
-                    {
-                        ann->network[j].neurons[k].weights[a] = ann->network[j].neurons[k].weights[a] + (ann->network[j + 1].neurons[a].delta * ann->network[j].neurons[k].sigmoidResult * learningRate);
-                        //   printf("Novo peso: %f\n", ann->network[j].neurons[k].weights[a]);
-                    }
-                    ann->network[j].neurons[k].bias = ann->network[j].neurons[k].bias + (ann->network[j].neurons[k].delta * learningRate);
-                }
-            }
-            for (j = 0; j < ann->outputLayer; j++)
-            {
-                ann->network[ann->hiddenLayers + 1].neurons[j].bias = ann->network[ann->hiddenLayers + 1].neurons[j].bias + (ann->network[ann->hiddenLayers + 1].neurons[j].delta * learningRate);
-            }
+        }
+        if(maxError < minimumError) {
+            ageCount = ages;
         }
     }
 }
@@ -254,7 +265,7 @@ int main()
         printf("\n");
     }
 
-    printf("Insira a quantidade de neuronios na camada de saída: ");
+    printf("Insira a quantidade de neuronios na camada de saida: ");
     scanf("%d", &ann->outputLayer);
     setbuf(stdin, NULL);
     printf("\n");
