@@ -1,0 +1,9 @@
+Número de execuções que vão ser realizadas
+Input 1 da execução 1 input 2 da execução 1
+Input 1 da execução 2 input 2 da execução 2
+Input 1 da execução 3 input 2 da execução 3
+    .
+    .
+    .
+    .
+Input 1 da última execução input 2 da última execução

@@ -1,0 +1,16 @@
+Quantidade de neurônios na camada de entrada (int)
+Quantidade de camadas ocultas da rede (int)
+Quantidade de neurônios em cada camada oculta (essa linha só existe se a rede tiver mais de 0 camadas ocultas) (int)
+Quantidade de neurônios na camada de saída (int)
+Taxa de Aprendizado (float)
+Quantidade de épocas para treinar os dados (int)
+Erro mínimo para parar o treinamento (float)
+Quantidade de dados para o treinamento (int)
+Entradas de treinamento 1 seguidas das saídas de treinamento 1 (float)
+Entradas de treinamento 2 seguidas das saídas de treinamento 2 (float)
+Entradas de treinamento 3 seguidas das saídas de treinamento 3 (float)
+Entradas de treinamento 4 seguidas das saídas de treinamento 4 (float)
+    .
+    .
+    .
+Entradas do último dado de treinamento seguidas das saídas do último dado de treinamento (float)

@@ -1,0 +1,18 @@
+Quantidade de neurônios na camada de entrada (int)
+Quantidade de camadas ocultas da rede (int)
+Quantidade de neurônios em cada camada oculta (essa linha só existe se a rede tiver mais de 0 camadas ocultas) (int)
+Quantidade de neurônios na camada de saída (int)
+Taxa de Aprendizado (float)
+Quantidade de épocas para treinar os dados (int)
+Erro mínimo para parar o treinamento (float)
+Quantidade de dados para o treinamento (int)
+Pesos da camada 1 neurônio 1 (float) Bias do neurônio 1 da camada 1 (float)
+Pesos da camada 1 neurônio 2 (float) Bias do neurônio 2 da camada 1 (float)
+Pesos da camada 2 neurônio 1 (float) Bias do neurônio 1 da camada 2 (float)
+Pesos da camada 2 neurônio 2 (float) Bias do neurônio 2 da camada 2 (float)
+            .
+            .
+            .
+            .
+Pesos da última camada último neurônio (float) Bias do último neurônio da última camada (float)
+Bias dos neurônios de saída
