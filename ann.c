@@ -24,6 +24,9 @@ typedef struct ann
     int outputLayer;
     int hiddenLayers;
     int hiddenLayersNeuronsAmount;
+    float learningRate;
+    int ages;
+    float minimumError;
     Layer *network;
 } Ann;
 
@@ -140,23 +143,14 @@ void executeAnn(Ann *ann, float *input)
     }
 }
 
-void trainingAnn(Ann *ann)
+void trainingAnn(Ann *ann, FILE *fileInput)
 {
-    int i,j,k,l, ages, a, ageCount, dataTrainingAmount;
-    float learningRate, minimumError;
+    int i, j, k, l, a, ageCount, dataTrainingAmount;
     //Receber dados de entrada
-    printf("Digite a taxa de aprendizado: ");
-    scanf("%f", &learningRate);
-    printf("\n");
-    printf("Digite a quantidade de epocas para treinar os dados: ");
-    scanf("%d", &ages);
-    printf("\n");
-    printf("Digite o erro minimo como condicao de parada do treinamento: ");
-    scanf("%f", &minimumError);
-    printf("\n");
-    printf("Digite a quantidade de dados que serao utilizados para o treinamento: ");
-    scanf("%d", &dataTrainingAmount);
-    printf("\n");
+    fscanf(fileInput, "%f", &ann->learningRate);
+    fscanf(fileInput, "%d", &ann->ages);
+    fscanf(fileInput, "%f", &ann->minimumError);
+    fscanf(fileInput, "%d", &dataTrainingAmount);
     float **trainingInput = (float **)malloc(dataTrainingAmount * sizeof(float *));
     float **trainingOutput = (float **)malloc(dataTrainingAmount * sizeof(float *));
     //Leitura dos dados de entrada
@@ -166,17 +160,15 @@ void trainingAnn(Ann *ann)
         trainingOutput[i] = (float *)malloc((ann->outputLayer + 1) * sizeof(float));
         for (j = 0; j < ann->inputLayer; j++)
         {
-            printf("Digite a entrada %d do conjunto de treinamento %d: ", j, i);
-            scanf("%f", &trainingInput[i][j]);
+            fscanf(fileInput, "%f", &trainingInput[i][j]);
         }
         for (j = 0; j < ann->outputLayer; j++)
         {
-            printf("Digite a saida %d esperada do conjunto de treinamento %d: ", j, i);
-            scanf("%f", &trainingOutput[i][j]);
+            fscanf(fileInput, "%f", &trainingOutput[i][j]);
         }
     }
 
-    for (ageCount = 0; ageCount < ages; ageCount++)
+    for (ageCount = 0; ageCount < ann->ages; ageCount++)
     {
         float maxError = 0;
         for (l = 0; l < dataTrainingAmount; l++)
@@ -189,13 +181,15 @@ void trainingAnn(Ann *ann)
             for (j = 0; j < ann->outputLayer; j++)
             {
                 ann->network[ann->hiddenLayers + 1].neurons[j].delta = (trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult) * ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult * (1 - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult);
-                error += (trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult)*(trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult);
+                error += (trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult) * (trainingOutput[l][j] - ann->network[ann->hiddenLayers + 1].neurons[j].sigmoidResult);
             }
-            error = error/2;
-            if(error > maxError) {
+            error = error / 2;
+            if (error > maxError)
+            {
                 maxError = error;
             }
-            if (error >= minimumError) {
+            if (error >= ann->minimumError)
+            {
 
                 //Calculo dos deltas das camadas intermediarias
                 for (j = ann->hiddenLayers; j > 0; j--)
@@ -221,75 +215,202 @@ void trainingAnn(Ann *ann)
                     {
                         for (a = 0; a < nextLayerSize; a++)
                         {
-                            ann->network[j].neurons[k].weights[a] = ann->network[j].neurons[k].weights[a] + (ann->network[j + 1].neurons[a].delta * ann->network[j].neurons[k].sigmoidResult * learningRate);
-
+                            ann->network[j].neurons[k].weights[a] = ann->network[j].neurons[k].weights[a] + (ann->network[j + 1].neurons[a].delta * ann->network[j].neurons[k].sigmoidResult * ann->learningRate);
                         }
-                        ann->network[j].neurons[k].bias = ann->network[j].neurons[k].bias + (ann->network[j].neurons[k].delta * learningRate);
+                        ann->network[j].neurons[k].bias = ann->network[j].neurons[k].bias + (ann->network[j].neurons[k].delta * ann->learningRate);
                     }
                 }
                 for (j = 0; j < ann->outputLayer; j++)
                 {
-                    ann->network[ann->hiddenLayers + 1].neurons[j].bias = ann->network[ann->hiddenLayers + 1].neurons[j].bias + (ann->network[ann->hiddenLayers + 1].neurons[j].delta * learningRate);
+                    ann->network[ann->hiddenLayers + 1].neurons[j].bias = ann->network[ann->hiddenLayers + 1].neurons[j].bias + (ann->network[ann->hiddenLayers + 1].neurons[j].delta * ann->learningRate);
                 }
             }
         }
-        if(maxError < minimumError) {
-            ageCount = ages;
+        if (maxError < ann->minimumError)
+        {
+            ageCount = ann->ages;
         }
     }
+}
+
+void multiplesExecutions(Ann *ann)
+{
+    FILE *fileInput, *fileOutput;
+    float *input;
+    int i, j, executionsAmount;
+
+    fileInput = fopen("executions.txt", "rt");
+    fileOutput = fopen("executions-output.txt", "wt");
+    input = (float *)malloc(ann->inputLayer * sizeof(float));
+    if (fileInput == NULL || fileOutput == NULL)
+    {
+        printf("\nPROBLEMAS NOS ARQUIVOS\n\n");
+        return;
+    }
+    //Receber dados de entrada
+    fscanf(fileInput, "%d", &executionsAmount);
+    for (j = 0; j < executionsAmount; j++)
+    {
+        for (i = 0; i < ann->inputLayer; i++)
+        {
+            fscanf(fileInput, "%f", &input[i]);
+        }
+        //Executar
+        executeAnn(ann, input);
+
+        //Escrever Saída de dados
+        for (i = 0; i < ann->outputLayer; i++)
+        {
+            fprintf(fileOutput, "%f ", ann->network[ann->hiddenLayers + 1].neurons[i].sigmoidResult);
+        }
+        fprintf(fileOutput, "\n");
+    }
+    printf("\nA Rede gerou um arquivo execution-output com as respostas!!\n\n");
+    fclose(fileInput);
+    fclose(fileOutput);
+}
+
+void importAnn(Ann *ann, FILE *fileInput)
+{
+    int i, j, k;
+    fscanf(fileInput, "%f", &ann->learningRate);
+    fscanf(fileInput, "%d", &ann->ages);
+    fscanf(fileInput, "%f", &ann->minimumError);
+
+    for (i = 0; i < ann->hiddenLayers + 1; i++)
+    {
+        int nextLayerSize = i == ann->hiddenLayers ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+        int layerSize = i == 0 ? ann->inputLayer : ann->hiddenLayersNeuronsAmount;
+        for (j = 0; j < layerSize; j++)
+        {
+            for (k = 0; k < nextLayerSize; k++)
+            {
+                fscanf(fileInput, "%f", &ann->network[i].neurons[j].weights[k]);
+            }
+            fscanf(fileInput, "%f", &ann->network[i].neurons[j].bias);
+        }
+    }
+
+    for (j = 0; j < ann->outputLayer; j++)
+    {
+        fscanf(fileInput, "%f", &ann->network[ann->hiddenLayers + 1].neurons[j].bias);
+    }
+
+    printf("\nA Rede foi importada com sucesso!\n\n");
+}
+
+void exportAnn(Ann *ann)
+{
+    int i, j, k;
+    FILE *fileOutput;
+    fileOutput = fopen("saved-ann.txt", "wt");
+    if (fileOutput == NULL)
+    {
+        printf("\nPROBLEMAS NA CRIACAO DO ARQUIVO\n\n");
+        return;
+    }
+    fprintf(fileOutput, "%d\n", ann->inputLayer);
+    fprintf(fileOutput, "%d\n", ann->hiddenLayers);
+    if (ann->hiddenLayers > 0)
+    {
+        fprintf(fileOutput, "%d\n", ann->hiddenLayersNeuronsAmount);
+    }
+    fprintf(fileOutput, "%d\n", ann->outputLayer);
+
+    fprintf(fileOutput, "%f\n", ann->learningRate);
+    fprintf(fileOutput, "%d\n", ann->ages);
+    fprintf(fileOutput, "%f\n", ann->minimumError);
+
+    for (i = 0; i < ann->hiddenLayers + 1; i++)
+    {
+        int nextLayerSize = i == ann->hiddenLayers ? ann->outputLayer : ann->hiddenLayersNeuronsAmount;
+        int layerSize = i == 0 ? ann->inputLayer : ann->hiddenLayersNeuronsAmount;
+        for (j = 0; j < layerSize; j++)
+        {
+            for (k = 0; k < nextLayerSize; k++)
+            {
+                fprintf(fileOutput, "%f ", ann->network[i].neurons[j].weights[k]);
+            }
+            fprintf(fileOutput, "%f ", ann->network[i].neurons[j].bias);
+            fprintf(fileOutput, "\n");
+        }
+    }
+
+    for (j = 0; j < ann->outputLayer; j++)
+    {
+        fprintf(fileOutput, "%f ", ann->network[ann->hiddenLayers + 1].neurons[j].bias);
+    }
+
+    printf("\nA Rede foi exportada no arquivo saved-ann.txt com sucesso!\n\n");
+    fclose(fileOutput);
 }
 
 int main()
 {
     Ann *ann = (Ann *)malloc(sizeof(Ann));
-    int i;
-    int menuOption = 1;
+    int i, fileOption = 0;
+    int menuOption = 2;
+    FILE *fileInput;
+    float *input;
 
-    //----------------------------- DECLARAÇÕES DE ENTRADA E SAÍDA ----------------------------- //
-
-    printf("Insira a quantidade de neuronios na camada de entrada: ");
-    scanf("%d", &ann->inputLayer);
-    setbuf(stdin, NULL);
-    printf("\n");
-
-    printf("Insira a quantidade de camadas ocultas da rede: ");
-    scanf("%d", &ann->hiddenLayers);
-    setbuf(stdin, NULL);
-    printf("\n");
-
-    if (ann->hiddenLayers != 0)
+    while (fileOption != 1 && fileOption != 2)
     {
-        printf("Insira a quantidade de neuronios em cada camada oculta da rede: ");
-        scanf("%d", &ann->hiddenLayersNeuronsAmount);
-        setbuf(stdin, NULL);
-        printf("\n");
+        printf("\nVoce deseja importar uma rede neural ou criar uma nova?\n 1- Importar\n 2- Criar Nova\n\nOpcao: ");
+        scanf("%d", &fileOption);
+
+        if (fileOption == 1)
+        {
+            fileInput = fopen("saved-ann.txt", "rt");
+        }
+        else if (fileOption == 2)
+        {
+            fileInput = fopen("training.txt", "rt");
+        }
     }
 
-    printf("Insira a quantidade de neuronios na camada de saida: ");
-    scanf("%d", &ann->outputLayer);
-    setbuf(stdin, NULL);
-    printf("\n");
+    if (fileInput == NULL)
+    {
+        printf("PROBLEMAS NA ABERTURA DO ARQUIVO");
+        return 1;
+    }
+    //----------------------------- DECLARAÇÕES DE ENTRADA E SAÍDA ----------------------------- //
+    fscanf(fileInput, "%d", &ann->inputLayer);
+    fscanf(fileInput, "%d", &ann->hiddenLayers);
+    if (ann->hiddenLayers != 0)
+    {
+        fscanf(fileInput, "%d", &ann->hiddenLayersNeuronsAmount);
+    }
+    fscanf(fileInput, "%d", &ann->outputLayer);
 
     //---------------------------- ALOCAÇÃO DA REDE NEURAL DINAMICAMENTE --------------------------- //
 
     //Alocar a rede neural
     alocateAnn(ann);
 
-    //------------------------------------ MENU DE OPÇÕES ------------------------------------- //
-
-    while (menuOption != 0)
+    //Inicializar os pesos se já tiver uma rede neural criada
+    if (fileOption == 1)
     {
-        if (menuOption == 1)
+        importAnn(ann, fileInput);
+    }
+    else if (fileOption == 2)
+    {
+        //------------------------------------ TREINAMENTO DA REDE ------------------------------------- //
+        trainingAnn(ann, fileInput);
+    }
+
+    fclose(fileInput);
+    //---------------------------------------- MENU DE OPÇÕES ------------------------------------- //
+    do
+    {
+        printf("Escolha uma das opcoes:\n\n0 - Sair\n1 - Testar a rede\n2 - Executar varias entradas\n3 - Exportar a rede\n\nOpcao: ");
+        scanf("%d", &menuOption);
+        switch (menuOption)
         {
-            //------------------------------------ TREINAMENTO DA REDE ------------------------------------- //
-            trainingAnn(ann);
-        }
-        else if (menuOption == 2)
-        {
+        case 1:
             //------------------------------------ EXECUÇÃO DA REDE ------------------------------------- //
 
             //Receber dados de entrada
-            float *input = (float *)malloc(ann->inputLayer * sizeof(float));
+            input = (float *)malloc(ann->inputLayer * sizeof(float));
             for (i = 0; i < ann->inputLayer; i++)
             {
                 printf("Digite o valor de entrada %d:", i);
@@ -299,15 +420,24 @@ int main()
             executeAnn(ann, input);
 
             //Printar Saída de dados
-            printf("SAÍDA DA REDE\n");
+            printf("\n\nSAIDA DA REDE\n");
             for (i = 0; i < ann->outputLayer; i++)
             {
                 printf("NEURONIO %d: %f\n", i, ann->network[ann->hiddenLayers + 1].neurons[i].sigmoidResult);
             }
+            break;
+        case 2:
+            //-------------------------- EXECUÇÃO DA REDE A PARTIR DE UM ARQUIVO -------------------------- //
+            multiplesExecutions(ann);
+            break;
+        case 3:
+            //------------------------------------ EXPORTAÇÃO DA REDE ------------------------------------- //
+            exportAnn(ann);
+            break;
+        default:
+            break;
         }
+    } while (menuOption != 0);
 
-        printf("Escolha:\n0 - Sair\n1 - Treinar a rede\n2 - Testar a rede\n");
-        scanf("%d", &menuOption);
-    }
     return 1;
 }

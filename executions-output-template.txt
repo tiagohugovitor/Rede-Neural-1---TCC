@@ -1,0 +1,7 @@
+Resultado do primeiro neurônio de saída da execução 1 resultado do segundo neurônio de saída da execução 1
+Resultado do primeiro neurônio de saída da execução 2 resultado do segundo neurônio de saída da execução 2
+Resultado do primeiro neurônio de saída da execução 3 resultado do segundo neurônio de saída da execução 3
+    .
+    .
+    .
+Resultado do primeiro neurônio de saída da última execução resultado do segundo neurônio de saída da última execução
