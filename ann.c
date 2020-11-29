@@ -347,6 +347,7 @@ void exportAnn(Ann *ann)
 
 int main()
 {
+    clock_t Ticks[2];
     Ann *ann = (Ann *)malloc(sizeof(Ann));
     int i, fileOption = 0;
     int menuOption = 2;
@@ -394,9 +395,14 @@ int main()
     }
     else if (fileOption == 2)
     {
+        Ticks[0] = clock();
         //------------------------------------ TREINAMENTO DA REDE ------------------------------------- //
         trainingAnn(ann, fileInput);
+        Ticks[1] = clock();
     }
+
+    double Tempo = (Ticks[1] - Ticks[0]) * 1000.0 / CLOCKS_PER_SEC;
+    printf("Tempo gasto: %g ms.", Tempo);
 
     fclose(fileInput);
     //---------------------------------------- MENU DE OPÇÕES ------------------------------------- //
@@ -427,8 +433,12 @@ int main()
             }
             break;
         case 2:
+            Ticks[0] = clock();
             //-------------------------- EXECUÇÃO DA REDE A PARTIR DE UM ARQUIVO -------------------------- //
             multiplesExecutions(ann);
+            Ticks[1] = clock();
+            double Tempo = (Ticks[1] - Ticks[0]) * 1000.0 / CLOCKS_PER_SEC;
+            printf("Tempo gasto: %g ms.", Tempo);
             break;
         case 3:
             //------------------------------------ EXPORTAÇÃO DA REDE ------------------------------------- //
